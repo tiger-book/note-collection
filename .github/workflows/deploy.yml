@@ -1,0 +1,47 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn docs:build
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/.vitepress/dist
+
+      - name: Sync to Gitee # 同步到Gitee
+        uses: Yikun/hub-mirror-action@master
+        with:
+          src: github/GA23187 # 被同步的源端账户名
+          dst: gitee/DuKouHu # 同步到的目的端账户名
+          dst_key: ${{ secrets.GITEE_RSA_PRIVATE_KEY }} # 目的端的私钥 需要在同步端新建及github下Settings-> Secrets 配置 GITEE_RSA_PRIVATE_KEY
+          dst_token: ${{ secrets.GITEE_TOKEN }} # 目的端的tokens 及gitee下私人令牌
+          static_list: "vitepress-demo" # 表示单一仓库同步
+          force_update: true # 启用 git push -f 强制同步
+          debug: true # 启用后会显示所有执行命令
+          timeout: "600s" #git超时设置, 超时后会自动重试git操作
+
+      - name: Deploy to gitee # 部署到gitee
+        uses: yanglbme/gitee-pages-action@v1.3.2
+        with:
+          deploy_key: ${{ secrets.GITEE_RSA_PRIVATE_KEY }} # key
+          gitee-username: DuKouHu # gitee 用户名
+          gitee-password: ${{ secrets.GITEE }} # gitee账户的密码
+          gitee-repo: gitee/DuKouHu # 推送到该仓库中，地址格式为gitee名称/仓库名
+          branch: master
